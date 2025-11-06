@@ -1,0 +1,96 @@
+input_rails:
+  - name: block_sensitive_amd_info
+    type: regex
+    pattern: "(?i)(AMD|Ryzen|Zen\\s*\\d+).*(branch\\s*predict(or|ion)|cache|micro[- ]?arch|pipeline|PBT|BTB|prediction\\s*table)"
+    on_fail: block
+    
+  - name: llm_intent_classifier
+    type: llm_classifier
+    intents:
+      - name: query_product_price
+        description: Ask for product price
+        examples:
+          - "How much is the robot arm?"
+          - "What is the price of a Ryzen 9 9950X CPU?"
+      - name: "check_order_status"
+        description: "User is asking about the status of their order."
+        entities:
+          order_id: "The unique identifier for the order."
+        examples:
+          - "What is the status of my order 12345?"
+          - "Where is order #67890?"
+          - "Check order status for 555-1212."
+      - name: control_robot_arm
+        description: Control the robot arm
+        examples:
+          - "Move the robot arm to the left"
+          - "Grab the sphere"
+      - name: check_flight_price
+        description: Asks for the price of a flight ticket, potentially including trip type (one-way, round-trip) and dates.
+        examples:
+          - "How much is a flight from Austin to New York?"
+          - "What's the price for a ticket to San Francisco from Dallas?"
+          - "Find me the cheapest flight from Boston to London."
+          - "What is the price for a one-way ticket to SFO from LAX on December 5th?"
+          - "Find me a round-trip flight from Boston to London from May 10th to May 17th."
+          - "price for a round-trip ticket from LAX to JFK on November 10 returning November 15"
+      - name: none
+        description: General or out-of-domain question
+        examples:
+          - "Introduce UT Austin"
+          - "What is deep-sea basket weaving?"
+
+# =====================================
+# Retrieval / Fallback
+# =====================================
+
+dialog:
+  - name: fallback
+    type: fallback
+    config:
+      threshold: 0.4              # Retrieval confidence threshold
+      fallback_behavior: generate_general_answer
+      fallback_message: |
+        I’m not sure this question is covered in the robot experiment materials,
+        but here’s what I can tell you in general.
+
+retrieval:
+  - name: retrieve_user_kb
+    config:
+      knowledge_base: RAG-user      # /safeguarddev/RAG-user folder
+      confidence_threshold: 0.4     # Consistent with runtime.conf_threshold
+
+output_rails:
+  # Layer 3: A final safety net to check the main LLM's output.
+  - name: block_sensitive_amd_info_output
+    type: "regex"
+    description: "Blocks output containing micro-architectural terms OR specific names."
+    pattern: "(?i)((AMD|Ryzen|Zen\\s*\\d+).*(branch\\s*predict(or|ion)|cache|micro[- ]?arch|pipeline|PBT|BTB|prediction\\s*table))|(Jane Doe|John Smith|Lisa Su|Project Starlight)"
+    
+    on_fail: "block"
+
+  - name: llama_semantic_guard
+    type: "llm_check"
+    description: "Uses Llama Guard for a final safety check."
+    model: "meta-llama/Llama-Guard-3-1B" 
+    on_fail: "block" 
+  - name: self_consistency_check
+    type: "self_consistency"
+    alternates: 2
+    thresholds: [0.5, 0.75]
+    mode: "warn"
+  - name: rag_faithfulness_check
+    type: "rag_faithfulness"
+    description: "Ensures generated output is grounded in retrieved RAG evidence."
+    mode: "warn"
+    block_threshold: 0.5
+    warn_threshold: 0.75
+
+  # - name: self_consistency_check
+  #   type: "self_consistency"
+  #   description: "Checks for hallucinations by comparing against alternate answers."
+  #   verification_model: "default" 
+  #   num_alternates: 2  
+  #   mode: "warn"       
+  #   block_threshold: 0.5 
+  #   warn_threshold: 0.75

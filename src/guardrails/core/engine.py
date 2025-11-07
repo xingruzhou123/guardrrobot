@@ -1,10 +1,11 @@
 # src/guardrails/core/engine.py
 
 import yaml
+import os
+import sys
+from typing import List, Dict, Any, Optional, AsyncIterator
 import time
 import asyncio
-from typing import Any, AsyncIterator, Dict, List, Optional
-
 from guardrails.core.runtime import SimpleRuntime
 from guardrails.core.config_types import RailsConfig
 from guardrails.rules.base import BaseOutputRule
@@ -24,18 +25,33 @@ class LLMRails:
         # [修复 1] 明确区分所有 vLLM 客户端
 
         # 客户端 1: 用于生成主要回复的 LLM (Qwen @ 8000)
+        # self.llm = VLLMOpenAIClient(
+        #     base_url="http://localhost:8000/v1",
+        #     model_name="Qwen/Qwen3-4B-Instruct-2507",
+        # )
+
+        # # 客户端 2: 用于意图分类的 LLM (Qwen @ 8000)
+        # print("Initializing Classifier LLM (Qwen)...")
+        # self.classifier_llm = VLLMOpenAIClient(
+        #     base_url="http://localhost:8000/v1",  # 使用 8000 端口
+        #     model_name="Qwen/Qwen3-4B-Instruct-2507",
+        # )
+
+        OPENAI_API_BASE = "https://api.openai.com/v1"
+        MAIN_MODEL = "gpt-4o-mini" 
+        CLASSIFIER_MODEL = "gpt-4o-mini"
+
         self.llm = VLLMOpenAIClient(
-            base_url="http://localhost:8000/v1",
-            model_name="Qwen/Qwen3-4B-Instruct-2507",
+            base_url=OPENAI_API_BASE,
+            model_name=MAIN_MODEL,
         )
 
-        # 客户端 2: 用于意图分类的 LLM (Qwen @ 8000)
-        print("Initializing Classifier LLM (Qwen)...")
+        # 客户端 2: 意图分类 LLM (指向 OpenAI)
+        print("Initializing Classifier LLM (OpenAI)...")
         self.classifier_llm = VLLMOpenAIClient(
-            base_url="http://localhost:8000/v1",  # 使用 8000 端口
-            model_name="Qwen/Qwen3-4B-Instruct-2507",
+            base_url=OPENAI_API_BASE,
+            model_name=CLASSIFIER_MODEL,
         )
-
         # 客户端 3: 用于语义安全检查的 LLM (Llama Guard @ 8002)
         print("Initializing Semantic Guard LLM (Llama Guard @ 8002)...")
         self.semantic_guard_llm = VLLMOpenAIClient(
@@ -43,13 +59,17 @@ class LLMRails:
             model_name="meta-llama/Llama-Guard-3-1B",  # <-- [关键] 指定 Llama Guard
         )
 
-        # 客户端 4: 用于一致性验证的 LLM (Qwen @ 8000)
-        print("Initializing Verification LLM (Qwen)...")
+        # # 客户端 4: 用于一致性验证的 LLM (Qwen @ 8000)
+        # print("Initializing Verification LLM (Qwen)...")
+        # self.verification_llm = VLLMOpenAIClient(
+        #     base_url="http://localhost:8000/v1",  # 默认使用相同的服务器
+        #     model_name="Qwen/Qwen3-4B-Instruct-2507",  # 默认使用相同的模型
+        # )
+        print("Initializing Verification LLM (OpenAI)...")
         self.verification_llm = VLLMOpenAIClient(
-            base_url="http://localhost:8000/v1",  # 默认使用相同的服务器
-            model_name="Qwen/Qwen3-4B-Instruct-2507",  # 默认使用相同的模型
+            base_url=OPENAI_API_BASE,
+            model_name=CLASSIFIER_MODEL,
         )
-
         print("vLLM Clients Initialized.")
 
         self.input_rules = self._load_rules_from_config(

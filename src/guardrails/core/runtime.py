@@ -69,7 +69,7 @@ class SimpleRuntime:
 
         # --- Initialize RAG retriever ---
         self.retriever = RAGRetriever(
-            kb_path="/workspace/safeguarddev/userrag",
+            kb_path="/guardrrobot/userrag",
             top_k=3,
             confidence_threshold=self.conf_threshold,
         )

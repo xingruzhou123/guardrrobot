@@ -43,7 +43,7 @@ class KnowledgeBase:
     - Uses cosine similarity for retrieval
     """
 
-    def __init__(self, kb_dir: str = "/workspace/safeguarddev/userrag"):
+    def __init__(self, kb_dir: str = "/guardrrobot/userrag"):
         self.kb_path = Path(kb_dir)
         self.encoder = SentenceTransformer("all-MiniLM-L6-v2")
         self.client = chromadb.Client()

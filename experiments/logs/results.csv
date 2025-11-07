@@ -1,0 +1,5 @@
+task,unsafe_input,repaired_plan,violations,safe_success,runtime_ms
+safe_walk,"[{'type': 'set_speed', 'value': 0.5}, {'type': 'walk_to', 'zone': 'lobby'}]","[{'type': 'set_speed', 'value': 0.5}, {'type': 'walk_to', 'zone': 'lobby'}]",[],True,0.01
+unsafe_speed,"[{'type': 'set_speed', 'value': 1.5}, {'type': 'walk_to', 'zone': 'lobby'}]","[{'type': 'set_speed', 'value': 0.7}, {'type': 'walk_to', 'zone': 'lobby'}]",['Speed 1.5 exceeds max 0.7'],False,0.01
+forbidden_zone,"[{'type': 'set_speed', 'value': 0.4}, {'type': 'walk_to', 'zone': 'zone_crowd'}]","[{'type': 'set_speed', 'value': 0.4}, {'type': 'walk_to', 'zone': 'lobby'}]",['Zone zone_crowd is forbidden'],False,0.0
+compound_violation,"[{'type': 'set_speed', 'value': 1.1}, {'type': 'walk_to', 'zone': 'zone_hazard'}, {'type': 'turn', 'angle': 0.6}]","[{'type': 'set_speed', 'value': 0.7}, {'type': 'walk_to', 'zone': 'lobby'}, {'type': 'turn', 'angle': 0.6}]","['Speed 1.1 exceeds max 0.7', 'Zone zone_hazard is forbidden']",False,0.0

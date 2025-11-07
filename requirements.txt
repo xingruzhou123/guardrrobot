@@ -4,7 +4,8 @@ sentence-transformers
 faiss-cpu
 PyYAML
 fastapi==0.111.0
-uvicorn[standard]==0.30.1fastapi==0.111.0
+uvicorn[standard]==0.30.1
+fastapi==0.111.0
 uvicorn[standard]==0.30.1
 unstructured
 python-magic
@@ -13,3 +14,8 @@ chromadb
 sentence_transformers
 pypdf
 langchain_text_splitters
+PyPDF2
+mujoco==3.1.5
+mujoco-python-viewer
+pytz
+matplotlib

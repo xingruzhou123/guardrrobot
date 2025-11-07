@@ -1,5 +1,6 @@
 import asyncio
-from openai import OpenAI
+import os
+from openai import OpenAI, base_url
 from vllm.engine.arg_utils import AsyncEngineArgs
 from vllm.engine.async_llm_engine import AsyncLLMEngine
 from vllm.sampling_params import SamplingParams
@@ -11,14 +12,19 @@ from .base import BaseLLM
 
 class VLLMOpenAIClient(BaseLLM):
     def __init__(self, base_url: str, model_name: str):
-        self.client = OpenAI(base_url=base_url, api_key="EMPTY")
+        api_key = "EMPTY"  # vLLM 默认值
+        if "localhost" not in base_url and "127.0.0.1" not in base_url:
+            # 如果不是本地 vLLM，就从环境变量中读取 OpenAI API 密钥
+            api_key = os.environ.get("OPENAI_API_KEY")
+            if not api_key:
+                print("⚠️ [VLLMOpenAIClient] 警告：未在环境变量中找到 OPENAI_API_KEY。")
+        
+        self.client = OpenAI(base_url=base_url, api_key=api_key)        
         self.model = model_name
 
     async def acomplete(self, messages: List[Dict[str, str]], **kwargs) -> str:
-        # ... (full content of acomplete)
         loop = asyncio.get_event_loop()
 
-        # --- ↓↓↓ 新增：构建一个包含所有参数的字典 ↓↓↓ ---
         params = {
             "model": self.model,
             "messages": messages,
@@ -26,18 +32,15 @@ class VLLMOpenAIClient(BaseLLM):
             "temperature": kwargs.get("temperature", 0.1),
             "stream": False,
         }
-        # 显式添加 'seed' 和 'top_p'（如果它们存在于 kwargs 中）
         if "seed" in kwargs:
             params["seed"] = kwargs["seed"]
         if "top_p" in kwargs:
             params["top_p"] = kwargs["top_p"]
-        # 您可以在此处添加 vLLM 支持的任何其他 OpenAI 兼容参数
-        # --- ↑↑↑ 结束修改 ↑↑↑ ---
+     
 
         try:
             response = await loop.run_in_executor(
                 None,
-                # --- ↓↓↓ MODIFIED: 传递解包后的 params 字典 ↓↓↓ ---
                 lambda: self.client.chat.completions.create(**params),
             )
             return response.choices[0].message.content or ""
